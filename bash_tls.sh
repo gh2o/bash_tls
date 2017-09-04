@@ -703,9 +703,14 @@ tls_recv_handshake() {
 }
 
 tls_do_handshake() {
+    local hostname=$1
     local tmp_dlen
 
     ##### ClientHello
+    local sni_ext=00$(printf %04X ${#hostname})$(hex_convert_from_string "$hostname")
+    sni_ext=$(printf %04X $(hex_len $sni_ext))${sni_ext}
+    sni_ext=0000$(printf %04X $(hex_len $sni_ext))${sni_ext}
+    local all_exts=${sni_ext}
     local cipher_suite=009C
     local client_random=$(read_from_fd $randfd 32)
     local client_hello=0303             # protocol version
@@ -713,6 +718,7 @@ tls_do_handshake() {
     client_hello+=00                    # session ID
     client_hello+=0002${cipher_suite}   # cipher suite list
     client_hello+=0100                  # compresion methods
+    client_hello+=$(printf %04X $(hex_len $all_exts))${all_exts}
     tls_send_handshake 01 $client_hello
 
     ##### ServerHello
@@ -845,7 +851,7 @@ main() {
     path=/${url#*/}
     if [ "$hostname" = "$path" ]; then path=/; fi
 
-    exec {sockfd}<>/dev/tcp/$hostname/443
+    exec {sockfd}<>/dev/tcp/"$hostname"/443
     exec {randfd}</dev/urandom
     exec {devnullfd}>/dev/null
 
@@ -854,7 +860,7 @@ main() {
     get_req+="Connection: close"$'\r\n\r\n'
 
     echo 'running handshake ...' >&2
-    tls_do_handshake
+    tls_do_handshake "$hostname"
     echo 'sending request ...' >&2
     tls_send_data $(hex_convert_from_string "$get_req")
     echo 'receiving response ...' >&2
