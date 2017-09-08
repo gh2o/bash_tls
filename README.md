@@ -1,7 +1,7 @@
 # bash_tls
 A minimal TLS 1.2 implementation in a pure Bash script
 
-bash_tls works well enough to make a simple HTTPS request to most web servers.
+bash_tls implements TLS well enough to make a simple HTTPS request to most web servers.
 
 ## Features
 * Supports a single cipher suite: TLS_RSA_WITH_AES_128_GCM_SHA256
