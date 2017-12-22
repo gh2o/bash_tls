@@ -11,7 +11,7 @@ set -o errtrace
 trap 'die "command error"' ERR
 
 if [ "$BASH_VERSION" '<' '4.3' ] || (( 64 << 30 < 64 )); then
-    echo "Only bash 4.1+ with 64-bit integers is supported." >&2
+    echo "Only bash 4.3+ with 64-bit integers is supported." >&2
     exit 1
 fi
 
