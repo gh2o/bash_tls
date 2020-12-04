@@ -3,6 +3,10 @@ A minimal TLS 1.2 implementation in a pure Bash script
 
 bash_tls implements TLS well enough to make a simple HTTPS request to most web servers.
 
+## Usage
+`./bash_tls.sh [https://website.com/path/to/file]`  
+If a URL is not given, defaults to `https://www.google.com/robots.txt`.
+
 ## Features
 * Supports a single cipher suite: TLS_RSA_WITH_AES_128_GCM_SHA256
   * RSA key exchange
