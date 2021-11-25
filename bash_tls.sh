@@ -314,14 +314,16 @@ AES_A_MIX=(0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48
 AES_B_MIX=(0 3 6 5 12 15 10 9 24 27 30 29 20 23 18 17 48 51 54 53 60 63 58 57 40 43 46 45 36 39 34 33 96 99 102 101 108 111 106 105 120 123 126 125 116 119 114 113 80 83 86 85 92 95 90 89 72 75 78 77 68 71 66 65 192 195 198 197 204 207 202 201 216 219 222 221 212 215 210 209 240 243 246 245 252 255 250 249 232 235 238 237 228 231 226 225 160 163 166 165 172 175 170 169 184 187 190 189 180 183 178 177 144 147 150 149 156 159 154 153 136 139 142 141 132 135 130 129 155 152 157 158 151 148 145 146 131 128 133 134 143 140 137 138 171 168 173 174 167 164 161 162 179 176 181 182 191 188 185 186 251 248 253 254 247 244 241 242 227 224 229 230 239 236 233 234 203 200 205 206 199 196 193 194 211 208 213 214 223 220 217 218 91 88 93 94 87 84 81 82 67 64 69 70 79 76 73 74 107 104 109 110 103 100 97 98 115 112 117 118 127 124 121 122 59 56 61 62 55 52 49 50 35 32 37 38 47 44 41 42 11 8 13 14 7 4 1 2 19 16 21 22 31 28 25 26)
 
 aes_break_word() {
-    local word=$1
-    echo $((word >> 24 & 0xFF)) $((word >> 16 & 0xFF)) $((word >> 8 & 0xFF)) $((word & 0xFF))
+    local -n _out=$1
+    local word=$2
+    _out=($((word >> 24 & 0xFF)) $((word >> 16 & 0xFF)) $((word >> 8 & 0xFF)) $((word & 0xFF)))
 }
 
 aes_sub_word() {
     local word=$1
     local -n box=${2:-AES_S_BOX}
-    local x=($(aes_break_word $word))
+    local x
+    aes_break_word x $word
     echo $((box[x[0]] << 24 | box[x[1]] << 16 | box[x[2]] <<  8 | box[x[3]]))
 }
 
@@ -404,10 +406,11 @@ aes_step_sub_bytes() {
 
 aes_step_shift_rows() {
     local -n _aes_state=$1
-    local s_0=($(aes_break_word ${_aes_state[0]}))
-    local s_1=($(aes_break_word ${_aes_state[1]}))
-    local s_2=($(aes_break_word ${_aes_state[2]}))
-    local s_3=($(aes_break_word ${_aes_state[3]}))
+    local s_0 s_1 s_2 s_3
+    aes_break_word s_0 ${_aes_state[0]}
+    aes_break_word s_1 ${_aes_state[1]}
+    aes_break_word s_2 ${_aes_state[2]}
+    aes_break_word s_3 ${_aes_state[3]}
 
     (( _aes_state[0] = s_0[0] << 24 | s_1[1] << 16 | s_2[2] << 8 | s_3[3],
        _aes_state[1] = s_1[0] << 24 | s_2[1] << 16 | s_3[2] << 8 | s_0[3],
@@ -420,7 +423,7 @@ aes_step_mix_columns() {
     local i
     for i in 0 1 2 3; do
         local w=${_aes_state[i]}
-        local x=($(aes_break_word $w))
+        local x; aes_break_word x $w
         local a=($((AES_A_MIX[x[0]])) $((AES_A_MIX[x[1]])) $((AES_A_MIX[x[2]])) $((AES_A_MIX[x[3]])))
         local b=($((AES_B_MIX[x[0]])) $((AES_B_MIX[x[1]])) $((AES_B_MIX[x[2]])) $((AES_B_MIX[x[3]])))
         _aes_state[$i]=$(((a[0] ^ b[1] ^ x[2] ^ x[3]) << 24 |
