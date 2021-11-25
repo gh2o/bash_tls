@@ -320,11 +320,11 @@ aes_break_word() {
 }
 
 aes_sub_word() {
-    local word=$1
+    local -n _word=$1
     local -n box=${2:-AES_S_BOX}
     local x
-    aes_break_word x $word
-    echo $((box[x[0]] << 24 | box[x[1]] << 16 | box[x[2]] <<  8 | box[x[3]]))
+    aes_break_word x $_word
+    _word=$((box[x[0]] << 24 | box[x[1]] << 16 | box[x[2]] << 8 | box[x[3]]))
 }
 
 aes_init_state() {
@@ -350,10 +350,11 @@ aes_init_state() {
         local temp=${self_w[-1]}
         if (( i % Nk == 0 )); then
             temp=$(((temp << 8 | temp >> 24) & 0xFFFFFFFF))
-            temp=$(($(aes_sub_word $temp) ^ (rcon << 24)))
+            aes_sub_word temp
+            temp=$((temp ^ (rcon << 24)))
             rcon=$(((rcon << 1) ^ (0x11B & -(rcon >> 7))))
         elif (( Nk > 6 && i % Nk == 4 )); then
-            temp=$(aes_sub_word $temp)
+            aes_sub_word temp
         fi
         self_w+=($((self_w[-Nk] ^ temp)))
     done
@@ -398,10 +399,10 @@ aes_step_add_round_key() {
 
 aes_step_sub_bytes() {
     local -n _aes_state=$1
-    _aes_state=($(aes_sub_word ${_aes_state[0]})
-                $(aes_sub_word ${_aes_state[1]})
-                $(aes_sub_word ${_aes_state[2]})
-                $(aes_sub_word ${_aes_state[3]}))
+    aes_sub_word '_aes_state[0]'
+    aes_sub_word '_aes_state[1]'
+    aes_sub_word '_aes_state[2]'
+    aes_sub_word '_aes_state[3]'
 }
 
 aes_step_shift_rows() {
@@ -514,10 +515,11 @@ aes_gcm_inner_crypt() {
             aes_gcm_hash_block agic_hash_state ${chunk}
         fi
         while [ -n "$chunk" ]; do
-            local chunk_byte smudge_byte
+            local chunk_byte smudge_byte newchunk_append
             hex_consume chunk_byte chunk 1
             hex_consume smudge_byte smudge 1
-            newchunk+=$(printf %02X $((0x$chunk_byte ^ 0x$smudge_byte)))
+            printf -v newchunk_append %02X $((0x$chunk_byte ^ 0x$smudge_byte))
+            newchunk+=${newchunk_append}
         done
         if ! (( decrypt )); then
             aes_gcm_hash_block agic_hash_state ${newchunk}
