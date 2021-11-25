@@ -534,10 +534,12 @@ aes_gcm_inner_crypt() {
 aes_gcm_hash_block() {
     local -n aghb_state=$1
     local hex_chunk=$2
+    local hex_chunk_len=$(hex_len "$hex_chunk")
 
     # pad to 16 bytes
-    while (( $(hex_len "$hex_chunk") < 16 )); do
+    while (( hex_chunk_len < 16 )); do
         hex_chunk+=00
+        (( hex_chunk_len += 1 ))
     done
 
     local aghb_old_state=(${aghb_state[@]})
