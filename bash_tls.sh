@@ -789,7 +789,7 @@ tls_do_handshake() {
         padded_pms=AA${padded_pms}
     done
     padded_pms=0002${padded_pms}
-    local encr_pms=$(BC_LINE_LENGTH=0 bc \
+    local encr_pms=$(BC_LINE_LENGTH=9999 bc \
         <<<"obase=16;ibase=16;b=${padded_pms};e=${pk_e};m=${pk_m};${RSA_BC_POW_PRGM}")
     while (( ${#encr_pms} < ${#pk_m} )); do encr_pms=0${encr_pms}; done
 
