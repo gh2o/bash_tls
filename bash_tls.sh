@@ -366,21 +366,19 @@ aes_do_encrypt() {
 
     local -n self_Nr=${self}_Nr
 
+    local i=0
     local state=($(hex_int $(hex_slice $block  0 4))
                  $(hex_int $(hex_slice $block  4 4))
                  $(hex_int $(hex_slice $block  8 4))
                  $(hex_int $(hex_slice $block 12 4)))
 
     aes_step_add_round_key state $self 0
-    for i in $(eval echo {1..$((self_Nr-1))}); do
-        aes_step_sub_bytes     state
-        aes_step_shift_rows    state
-        aes_step_mix_columns   state
+    while ((i++ < self_Nr)); do
+        aes_step_sub_bytes state
+        aes_step_shift_rows state
+        ((i < self_Nr)) && aes_step_mix_columns state
         aes_step_add_round_key state $self $i
     done
-    aes_step_sub_bytes     state
-    aes_step_shift_rows    state
-    aes_step_add_round_key state $self $self_Nr
     printf '%08X%08X%08X%08X\n' ${state[0]} ${state[1]} ${state[2]} ${state[3]}
 }
 
@@ -391,10 +389,14 @@ aes_step_add_round_key() {
 
     local -n self_w=${self}_w
 
-    (( _aes_state[0] ^= self_w[4*round+0],
-       _aes_state[1] ^= self_w[4*round+1],
-       _aes_state[2] ^= self_w[4*round+2],
-       _aes_state[3] ^= self_w[4*round+3] )) || true
+    ((
+        _aes_state[0] ^= self_w[4*round+0],
+        _aes_state[1] ^= self_w[4*round+1],
+        _aes_state[2] ^= self_w[4*round+2],
+        _aes_state[3] ^= self_w[4*round+3],
+        1
+    ))
+
 }
 
 aes_step_sub_bytes() {
@@ -413,10 +415,13 @@ aes_step_shift_rows() {
     aes_break_word s_2 ${_aes_state[2]}
     aes_break_word s_3 ${_aes_state[3]}
 
-    (( _aes_state[0] = s_0[0] << 24 | s_1[1] << 16 | s_2[2] << 8 | s_3[3],
-       _aes_state[1] = s_1[0] << 24 | s_2[1] << 16 | s_3[2] << 8 | s_0[3],
-       _aes_state[2] = s_2[0] << 24 | s_3[1] << 16 | s_0[2] << 8 | s_1[3],
-       _aes_state[3] = s_3[0] << 24 | s_0[1] << 16 | s_1[2] << 8 | s_2[3] )) || true
+    ((
+        _aes_state[0] = s_0[0] << 24 | s_1[1] << 16 | s_2[2] << 8 | s_3[3],
+        _aes_state[1] = s_1[0] << 24 | s_2[1] << 16 | s_3[2] << 8 | s_0[3],
+        _aes_state[2] = s_2[0] << 24 | s_3[1] << 16 | s_0[2] << 8 | s_1[3],
+        _aes_state[3] = s_3[0] << 24 | s_0[1] << 16 | s_1[2] << 8 | s_2[3],
+        1
+    ))
 }
 
 aes_step_mix_columns() {
