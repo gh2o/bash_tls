@@ -652,11 +652,13 @@ tls_send_record() {
 }
 
 tls_process_record() {
-    local type=$(read_from_fd $sockfd 1)
-    local version=$(read_from_fd $sockfd 2)
-    local dlen=$(read_from_fd $sockfd 2)
-    local length=$(hex_int $dlen)
-    local fragment=$(read_from_fd $sockfd $length)
+    local type version dlen length fragment
+    type=$(read_from_fd $sockfd 1)
+    version=$(read_from_fd $sockfd 2)
+    dlen=$(read_from_fd $sockfd 2)
+    length=$(hex_int $dlen)
+    fragment=$(read_from_fd $sockfd $length)
+
     if (( $tls_read_encrypted )); then
         # decrypted length is 24 bytes shorter (8 from nonce, 16 from GCM tag)
         local nonce
@@ -665,6 +667,7 @@ tls_process_record() {
         fragment=$(aes_gcm_do_decrypt tls_read_gcm $nonce $header $fragment)
         (( tls_read_seq += 1 ))
     fi
+
     case $type in
         14) # change cipher spec
             tls_changecipherspec_buffer+=$fragment
